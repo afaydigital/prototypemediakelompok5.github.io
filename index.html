@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPI Keragaman Indonesia - Landscape PID</title>
+    <style>
+        /* Gaya Dasar & Layout Layar Lebar (Landscape) */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #2c3e50; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        
+        /* Container Rasio 16:9 untuk PID/Desktop */
+        .app-container { width: 100vw; max-width: 1280px; aspect-ratio: 16/9; max-height: 100vh; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow-y: auto; overflow-x: hidden; border-radius: 12px; }
+        
+        /* Pengaturan Halaman */
+        .page { display: none; padding: 40px 60px; text-align: center; height: 100%; box-sizing: border-box; flex-direction: column; }
+        .active { display: flex; }
+
+        /* Warna Latar Halaman (Mengikuti Flowchart) */
+        #page-splash { background: linear-gradient(135deg, #20c997, #17a2b8); color: white; justify-content: center; align-items: center; } 
+        #page-loading, #page-home, #page-petunjuk { background-color: #cce5ff; } /* Biru Muda */
+        #page-login, #page-informasi { background-color: #e6ccff; } /* Ungu Muda */
+        #page-cptp { background-color: #ffeb99; } /* Kuning/Oranye Muda */
+        #page-materi, #page-submateri { background-color: #c3e6cb; } /* Hijau Muda */
+        #page-evaluasi { background-color: #f5c6cb; } /* Merah Muda */
+
+        /* Tipografi Layar Lebar */
+        h1 { font-size: 36px; color: #333; margin-bottom: 10px; }
+        h2 { font-size: 26px; color: #555; margin-bottom: 25px; }
+        p { font-size: 18px; color: #444; line-height: 1.6; }
+
+        /* Sistem Grid untuk Landscape */
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; margin-top: 20px; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; margin-top: 20px; }
+        .grid-bottom { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 50%; margin: 30px auto 0 auto; }
+
+        /* Komponen Tombol */
+        .btn { display: flex; align-items: center; justify-content: center; width: 100%; padding: 20px; border: none; border-radius: 15px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 10px rgba(0,0,0,0.15); transition: all 0.2s; }
+        .btn:active { transform: scale(0.97); box-shadow: 0 3px 5px rgba(0,0,0,0.15); }
+
+        /* Warna Tombol Navigasi */
+        .btn-mulai { background-color: #ffffff; color: #17a2b8; font-size: 28px; width: auto; padding: 20px 60px; border-radius: 50px; margin-top: 40px; box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+        .btn-mulai:hover { background-color: #f8f9fa; transform: translateY(-3px); }
+        .btn-cptp { background-color: #ffcc00; color: #333; }
+        .btn-materi { background-color: #28a745; color: white; }
+        .btn-evaluasi { background-color: #dc3545; color: white; }
+        .btn-info { background-color: #6f42c1; color: white; }
+        .btn-petunjuk { background-color: #17a2b8; color: white; }
+        .btn-selesai { background-color: #20c997; color: white; }
+        .btn-keluar { background-color: #6c757d; color: white; }
+        .btn-back { background-color: #343a40; color: white; width: auto; padding: 15px 40px; margin-top: 20px; align-self: center;}
+        
+        /* Form Login */
+        .login-box { background: rgba(255,255,255,0.9); padding: 40px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 50%; margin: auto; text-align: left; }
+        .input-group { margin-bottom: 25px; }
+        label { font-size: 18px; font-weight: bold; color: #333; }
+        input { width: 100%; padding: 15px; margin-top: 8px; border: 2px solid #ccc; border-radius: 10px; font-size: 18px; box-sizing: border-box; }
+
+        /* Kotak Konten */
+        .content-box { background: rgba(255,255,255,0.9); padding: 30px; border-radius: 15px; text-align: left; margin-bottom: 20px; font-size: 20px; line-height: 1.6; box-shadow: 0 4px 10px rgba(0,0,0,0.05);}
+        
+        /* Animasi Loading */
+        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite; margin: 0 auto 30px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Kuis */
+        .opsi-btn { background: white; border: 3px solid #dc3545; color: #333; justify-content: flex-start; text-align: left; padding: 15px 25px; font-weight: normal; margin-bottom: 10px;}
+        #area-kuis, #area-hasil { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- 1. SPLASH SCREEN (LAYAR PEMBUKA) -->
+    <div id="page-splash" class="page active">
+        <h1 style="font-size: 60px; color: white; margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Media Pembelajaran Interaktif</h1>
+        <h2 style="font-size: 35px; color: #f8f9fa; margin-bottom: 20px; font-weight: normal;">Ilmu Pengetahuan Sosial (IPS) Fase D</h2>
+        
+        <div style="background: rgba(255,255,255,0.2); padding: 20px 50px; border-radius: 15px; margin-top: 20px; backdrop-filter: blur(5px);">
+            <h1 style="font-size: 45px; color: white; margin: 0;">Keragaman Masyarakat Indonesia</h1>
+            <p style="font-size: 24px; color: white; margin: 10px 0 0 0;">SMPN 1 Alalak</p>
+        </div>
+
+        <button class="btn btn-mulai" onclick="mulaiAplikasi()">▶ Mulai Belajar</button>
+    </div>
+
+    <!-- 2. HALAMAN LOADING -->
+    <div id="page-loading" class="page">
+        <div style="margin: auto;">
+            <div class="loader"></div>
+            <h1>Memuat Modul Ajar...</h1>
+            <p style="font-size: 20px;">Menyiapkan aset pembelajaran untuk Anda</p>
+        </div>
+    </div>
+
+    <!-- 3. HALAMAN LOGIN -->
+    <div id="page-login" class="page">
+        <div class="login-box">
+            <h1 style="text-align: center; margin-bottom: 30px;">🎓 Selamat Datang</h1>
+            
+            <div class="input-group">
+                <label>Nama Lengkap</label>
+                <input type="text" id="input-nama" placeholder="Ketik nama di sini...">
+            </div>
+            <div class="input-group">
+                <label>Kelas</label>
+                <input type="text" id="input-kelas" placeholder="Misal: VIII A">
+            </div>
+            
+            <button class="btn btn-materi" style="margin-top: 10px;" onclick="prosesLogin()">Masuk Kelas</button>
+        </div>
+    </div>
+
+    <!-- 4. HALAMAN UTAMA -->
+    <div id="page-home" class="page">
+        <div style="background: white; padding: 20px 40px; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+            <div style="text-align: left;">
+                <h1 id="teks-sapaan" style="margin:0; color:#333;">Halo, Siswa!</h1>
+                <p style="margin:5px 0 0 0; font-size:18px; color: #666;">SMPN 1 Alalak - Kelas <span id="teks-kelas">VIII</span></p>
+            </div>
+            <h2 style="margin:0; color:#0056b3;">MENU UTAMA</h2>
+        </div>
+        
+        <!-- Grid Menu Atas (3 Tombol Utama) -->
+        <div class="grid-3">
+            <button class="btn btn-cptp" onclick="navigasi('page-cptp')">📄 CP & TP</button>
+            <button class="btn btn-materi" onclick="navigasi('page-materi')">📖 Materi Pembelajaran</button>
+            <button class="btn btn-evaluasi" onclick="navigasi('page-evaluasi')">📝 Evaluasi (Kuis)</button>
+        </div>
+
+        <!-- Grid Menu Tengah (2 Tombol Info & Petunjuk) -->
+        <div class="grid-3" style="grid-template-columns: 1fr 1fr; width: 66%; margin: 20px auto 0 auto;">
+            <button class="btn btn-info" onclick="navigasi('page-informasi')">ℹ️ Informasi Media</button>
+            <button class="btn btn-petunjuk" onclick="navigasi('page-petunjuk')">❓ Petunjuk Penggunaan</button>
+        </div>
+        
+        <div style="flex-grow: 1;"></div>
+        
+        <!-- Grid Bawah (Keluar & Selesai) -->
+        <div class="grid-bottom">
+            <button class="btn btn-keluar" onclick="keluarAplikasi()">🚪 Keluar</button>
+            <button class="btn btn-selesai" onclick="alert('Terima kasih telah belajar materi Keragaman Masyarakat Indonesia hari ini!')">✅ Selesai</button>
+        </div>
+    </div>
+
+    <!-- 5. HALAMAN CP & TP -->
+    <div id="page-cptp" class="page">
+        <h1>📄 Capaian & Tujuan Pembelajaran</h1>
+        <div class="grid-2" style="margin-top: 30px; flex-grow: 1;">
+            <div class="content-box">
+                <h2 style="color:#b38f00;">Capaian Pembelajaran (Fase D)</h2>
+                <p>Peserta didik dapat memahami hubungan antara kondisi geografis dengan keanekaragaman budaya, agama, etnis, dan mata pencaharian, serta menumbuhkan komitmen persatuan dalam semboyan Bhinneka Tunggal Ika.</p>
+            </div>
+            <div class="content-box">
+                <h2 style="color:#b38f00;">Tujuan Pembelajaran</h2>
+                <p>Peserta didik mampu menganalisis keragaman masyarakat Indonesia tentang berbagai macam agama, budaya, suku bangsa, dan pekerjaan serta manfaatnya bagi kemajuan dan keutuhan bangsa.</p>
+            </div>
+        </div>
+        <button class="btn btn-back" onclick="navigasi('page-home')">Kembali ke Menu Utama</button>
+    </div>
+
+    <!-- 6. DAFTAR MATERI -->
+    <div id="page-materi" class="page">
+        <h1>📖 Daftar Sub Materi</h1>
+        <div class="grid-3">
+            <button class="btn btn-materi" onclick="bukaSubMateri(0)">1. Faktor Pembentuk</button>
+            <button class="btn btn-materi" onclick="bukaSubMateri(1)">2. Keragaman Agama</button>
+            <button class="btn btn-materi" onclick="bukaSubMateri(2)">3. Keragaman Budaya</button>
+            <button class="btn btn-materi" onclick="bukaSubMateri(3)">4. Suku Bangsa</button>
+            <button class="btn btn-materi" onclick="bukaSubMateri(4)">5. Keragaman Pekerjaan</button>
+            <button class="btn btn-materi" onclick="bukaSubMateri(5)">6. Manfaat Keragaman</button>
+        </div>
+        
+        <div style="flex-grow: 1;"></div>
+        <button class="btn btn-back" onclick="navigasi('page-home')">Kembali ke Menu Utama</button>
+    </div>
+
+    <!-- 7. KONTEN SUB-MATERI -->
+    <div id="page-submateri" class="page">
+        <h1 id="judul-submateri" style="margin-bottom: 20px;">Judul Materi</h1>
+        
+        <div class="grid-2" style="flex-grow: 1; align-items: start;">
+            <!-- Kolom Teks Materi -->
+            <div class="content-box" id="isi-submateri" style="min-height: 250px;">
+                Memuat konten materi...
+            </div>
+            
+            <!-- Kolom LKPD -->
+            <div class="content-box" style="background-color: #ffe8a1; border-left: 6px solid #ffcc00;">
+                <h2 style="color: #b38f00; margin-top: 0;">Aktivitas / LKPD</h2>
+                <p id="teks-lkpd" style="font-weight: bold; font-size: 22px;">Bagaimana cara kamu mengapresiasi keragaman ini di lingkungan SMPN 1 Alalak?</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 20px;">
+            <button class="btn btn-materi" style="background-color: #1e7e34; width: auto; padding: 15px 40px;" onclick="navigasi('page-materi')">Kembali ke Daftar Materi</button>
+            <button class="btn btn-back" style="margin-top: 0;" onclick="navigasi('page-home')">Kembali ke Menu Utama</button>
+        </div>
+    </div>
+
+    <!-- 8. EVALUASI -->
+    <div id="page-evaluasi" class="page">
+        <h1>📝 Evaluasi Pembelajaran</h1>
+        
+        <!-- Panel Petunjuk Kuis -->
+        <div id="area-petunjuk-kuis" class="content-box" style="width: 70%; margin: 30px auto;">
+            <h2>Petunjuk Pengerjaan:</h2>
+            <ul style="font-size: 20px; line-height: 1.8;">
+                <li>Terdapat 5 soal pilihan ganda berdasarkan Modul Ajar.</li>
+                <li>Pilih salah satu jawaban (A, B, C, atau D) yang paling tepat dengan menyentuh layar.</li>
+                <li>Skor akhir dan pesan evaluasi akan langsung muncul setelah seluruh soal terjawab.</li>
+            </ul>
+            <button class="btn btn-evaluasi" style="width: 50%; margin: 30px auto 0 auto;" onclick="mulaiKuis()">Mulai Mengerjakan</button>
+        </div>
+
+        <!-- Panel Pertanyaan -->
+        <div id="area-kuis" class="content-box" style="width: 90%; margin: 20px auto; flex-grow: 1;">
+            <h2 style="color: #dc3545;">Soal <span id="nomor-soal-teks">1</span> dari 5</h2>
+            <p id="teks-pertanyaan" style="font-weight: bold; font-size: 24px; margin-bottom: 30px;">Pertanyaan di sini...</p>
+            
+            <div id="opsi-jawaban" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Tombol opsi disuntikkan via JS -->
+            </div>
+        </div>
+
+        <!-- Panel Hasil -->
+        <div id="area-hasil" class="content-box" style="text-align: center; width: 60%; margin: 40px auto;">
+            <h1>Hasil Evaluasi</h1>
+            <div style="font-size: 70px; font-weight: bold; color: #dc3545; margin: 20px 0;" id="skor-akhir">100</div>
+            <p id="pesan-hasil" style="font-size: 24px; font-weight: bold;">Luar biasa!</p>
+            <button class="btn btn-evaluasi" style="width: auto; padding: 15px 50px; margin: 30px auto 0 auto;" onclick="navigasi('page-evaluasi')">Ulangi Evaluasi</button>
+        </div>
+
+        <div style="flex-grow: 1;"></div>
+        <button class="btn btn-back" onclick="navigasi('page-home')">Kembali ke Menu Utama</button>
+    </div>
+
+    <!-- 9. INFORMASI -->
+    <div id="page-informasi" class="page">
+        <h1>ℹ️ Informasi Media</h1>
+        <div class="grid-2" style="flex-grow: 1; align-items: start; margin-top: 30px;">
+            <div class="content-box">
+                <h2>Tim Pengembang:</h2>
+                <ol style="font-size: 20px; line-height: 1.8; margin-top: 0;">
+                    <li>Syamsudinor</li>
+                    <li>Ani Kurnia Fuspita</li>
+                    <li>M. Dzaka Nafis</li>
+                    <li>Yuyun Khoriatin</li>
+                    <li>Azumaradhi Adzra</li>
+                    <li>Muhammad Afriandy</li>
+                </ol>
+            </div>
+            <div class="content-box">
+                <h2>Referensi & Konteks:</h2>
+                <p><b>Materi Induk:</b><br>Modul Ajar IPS Kelas VIII - Fase D</p>
+                <p><b>Konteks Lokal Pembelajaran:</b><br>SMPN 1 Alalak, Barito Kuala, Kalimantan Selatan.</p>
+                <p><b>Target Implementasi:</b><br>Interactive Flat Panel / Pusat Informasi Digital (PID).</p>
+            </div>
+        </div>
+        <button class="btn btn-back" onclick="navigasi('page-home')">Kembali ke Menu Utama</button>
+    </div>
+
+    <!-- 10. PETUNJUK -->
+    <div id="page-petunjuk" class="page">
+        <h1>❓ Petunjuk Penggunaan (PID)</h1>
+        <div class="content-box" style="width: 80%; margin: 30px auto;">
+            <ul style="font-size: 22px; line-height: 2;">
+                <li>Sentuh <b>Tombol Berwarna</b> di layar Halaman Utama untuk membuka menu yang diinginkan.</li>
+                <li>Tombol <b>Ke Menu Utama</b> selalu berada di bagian bawah tengah layar.</li>
+                <li>Materi dirancang interaktif. Anda bebas memilih sub-materi (1-6) secara acak maupun berurutan.</li>
+                <li>Kerjakan Evaluasi di akhir sesi untuk mengukur pemahaman belajar Anda hari ini.</li>
+            </ul>
+        </div>
+        <div style="flex-grow: 1;"></div>
+        <!-- Tombol ini berfungsi sebagai "Next" di awal, dan "Back" jika diakses dari Menu Utama -->
+        <button class="btn btn-materi" style="width: auto; padding: 15px 60px; margin-top: 20px; align-self: center;" onclick="navigasi('page-home')">Ke Menu Utama ➔</button>
+    </div>
+
+</div>
+
+<script>
+    // --- FUNGSI ALUR AWAL (SPLASH -> LOADING -> LOGIN) ---
+    function mulaiAplikasi() {
+        navigasi('page-loading');
+        
+        setTimeout(() => {
+            navigasi('page-login');
+        }, 1500);
+    }
+
+    // --- NAVIGASI & SISTEM DASAR ---
+    function navigasi(idHalaman) {
+        let pages = document.querySelectorAll('.page');
+        pages.forEach(page => page.classList.remove('active'));
+        document.getElementById(idHalaman).classList.add('active');
+        
+        if(idHalaman === 'page-evaluasi') {
+            document.getElementById('area-petunjuk-kuis').style.display = 'block';
+            document.getElementById('area-kuis').style.display = 'none';
+            document.getElementById('area-hasil').style.display = 'none';
+        }
+    }
+
+    function prosesLogin() {
+        let nama = document.getElementById('input-nama').value;
+        let kelas = document.getElementById('input-kelas').value;
+        
+        if(nama.trim() === "" || kelas.trim() === "") {
+            alert("Harap lengkapi Nama dan Kelas terlebih dahulu!");
+            return;
+        }
+        
+        document.getElementById('teks-sapaan').innerText = "Halo, " + nama + "!";
+        document.getElementById('teks-kelas').innerText = kelas;
+        
+        // REVISI: Mengarahkan siswa ke halaman Petunjuk terlebih dahulu sebelum ke Halaman Utama
+        navigasi('page-petunjuk');
+    }
+
+    function keluarAplikasi() {
+        if(confirm("Apakah Anda yakin ingin keluar dari aplikasi?")) {
+            document.getElementById('input-nama').value = "";
+            document.getElementById('input-kelas').value = "";
+            navigasi('page-splash');
+        }
+    }
+
+    // --- DATABASE MATERI LOKAL (Dari Modul Ajar) ---
+    const databaseMateri = [
+        {
+            judul: "1. Faktor Pembentuk Keragaman",
+            isi: "<p>Indonesia memiliki keragaman karena letak strategis geografis di antara Benua Asia & Australia. Selain itu, kondisi negara kepulauan memisahkan daratan pada masa lampau sehingga melahirkan bahasa dan tradisi khas.</p><p>Perbedaan alam seperti sungai, pesisir, dan dataran tinggi juga sangat memengaruhi budaya dan mata pencaharian.</p>",
+            lkpd: "Diskusikan: Faktor bentang alam apa yang paling memengaruhi keragaman sosial budaya di wilayah sekitar SMPN 1 Alalak?"
+        },
+        {
+            judul: "2. Keragaman Agama",
+            isi: "<p>Terdapat enam agama yang secara resmi diakui dan dijamin oleh Pasal 29 UUD NRI 1945: Islam (Masjid), Kristen Protestan (Gereja), Katolik (Gereja), Hindu (Pura), Buddha (Vihara), dan Khonghucu (Klenteng/Litang).</p><p>Kita harus selalu menumbuhkan sikap toleransi dan moderasi beragama di lingkungan sekolah maupun masyarakat.</p>",
+            lkpd: "Rencanakan cara berinteraksi dan menciptakan suasana rukun yang nyata dengan teman yang berbeda keyakinan di sekolah!"
+        },
+        {
+            judul: "3. Keragaman Budaya",
+            isi: "<p>Setiap daerah memiliki unsur kebudayaan universal seperti bahasa daerah, sistem religi, kesenian, pakaian tradisional, dan rumah adat.</p><p>Di Kabupaten Barito Kuala, kita memiliki keunikan budaya lokal yang sangat berharga, seperti tradisi kearifan sungai Barito, kerajinan jukung kayu khas Alalak, seni kain Sasirangan, hingga kesenian musik Panting.</p>",
+            lkpd: "Rencanakan suatu kegiatan kreatif untuk melestarikan dan mendokumentasikan keunikan budaya lokal kerajinan jukung kayu Alalak."
+        },
+        {
+            judul: "4. Keragaman Suku Bangsa",
+            isi: "<p>Faktor geografis kepulauan melahirkan beragam suku bangsa. Di Indonesia terdapat suku Jawa, Sunda, Dayak, Banjar, Batak, Minang, Bugis, Papua, dan banyak lagi.</p><p>Sangat penting untuk menghindari sikap <b>etnosentrisme</b>, yaitu sikap yang memandang rendah budaya suku lain dan menganggap budayanya sendiri paling hebat.</p>",
+            lkpd: "Rencanakan tindakan spesifik agar pertemanan di dalam kelas tidak hanya mengelompok berdasarkan satu suku tertentu saja."
+        },
+        {
+            judul: "5. Keragaman Pekerjaan",
+            isi: "<p>Bentang alam sangat memengaruhi jenis pekerjaan masyarakatnya. Di sepanjang pesisir sungai Barito Alalak, banyak masyarakat bermata pencaharian sebagai nelayan, pedagang pasar terapung, atau pembuat perahu jukung.</p><p>Semua profesi (dokter, petani, pengrajin kayu, guru) saling memiliki spesialisasi dan saling bergantung satu sama lain (interdependensi).</p>",
+            lkpd: "Lakukan rencana pengamatan singkat atau wawancara terhadap pekerjaan pengrajin kapal kayu/jukung di sekitar Alalak!"
+        },
+        {
+            judul: "6. Manfaat Keragaman",
+            isi: "<p>Keragaman bukanlah pemecah belah, melainkan berfungsi sebagai modal sosial, memperkuat persatuan melalui semboyan <b>Bhinneka Tunggal Ika</b>, memperkaya kebudayaan nasional, serta menjadi daya tarik wisata edukasi.</p><p>Nilai utamanya diwujudkan secara nyata melalui tindakan toleransi, semangat gotong royong, dan sikap anti-diskriminasi.</p>",
+            lkpd: "Tuliskan komitmen pribadimu untuk secara aktif merawat persatuan dan mencegah perundungan (bullying) di SMPN 1 Alalak."
+        }
+    ];
+
+    function bukaSubMateri(index) {
+        document.getElementById('judul-submateri').innerText = databaseMateri[index].judul;
+        document.getElementById('isi-submateri').innerHTML = databaseMateri[index].isi;
+        document.getElementById('teks-lkpd').innerText = databaseMateri[index].lkpd;
+        navigasi('page-submateri');
+    }
+
+    // --- SISTEM EVALUASI (Dari Soal Modul Ajar) ---
+    const bankSoal = [
+        {
+            pertanyaan: "1. Semboyan 'Bhinneka Tunggal Ika' yang menjadi prinsip persatuan dalam keragaman bangsa Indonesia berasal dari kitab kuno karangan Mpu Tantular pada masa Kerajaan Majapahit, yaitu...",
+            opsi: ["A. Kitab Negarakertagama", "B. Kitab Sutasoma", "C. Kitab Pararaton", "D. Kitab Arjuna Wiwaha"],
+            jawabanBenar: 1 // Index B
+        },
+        {
+            pertanyaan: "2. Jaminan kemerdekaan bagi tiap-tiap penduduk untuk memeluk agamanya masing-masing dan beribadat menurut agamanya dan kepercayaannya itu secara tegas dijamin dalam konstitusi pada...",
+            opsi: ["A. Pasal 27 ayat (1) UUD NRI 1945", "B. Pasal 28E ayat (1) dan Pasal 29 ayat (2) UUD NRI 1945", "C. Pasal 31 ayat (1) UUD NRI 1945", "D. Pasal 33 ayat (1) UUD NRI 1945"],
+            jawabanBenar: 1 // Index B
+        },
+        {
+            pertanyaan: "3. Masyarakat yang bertempat tinggal di wilayah Kecamatan Alalak, didiami oleh percampuran suku asli yang harmonis, terutama suku...",
+            opsi: ["A. Suku Minahasa dan Suku Gorontalo", "B. Suku Banjar dan Suku Dayak Bakumpai", "C. Suku Baduy dan Suku Tengger", "D. Suku Sasak dan Suku Sumbawa"],
+            jawabanBenar: 1 // Index B
+        },
+        {
+            pertanyaan: "4. Di sepanjang pesisir sungai Barito Alalak, aktivitas ekonomi berupa pembuatan jukung dan kapal kayu tradisional membuktikan bahwa keragaman pekerjaan sangat dipengaruhi oleh...",
+            opsi: ["A. Perbedaan garis bujur dan zona waktu matahari", "B. Kondisi geografis dan potensi sumber daya alam lingkungan sekitar", "C. Keinginan semata tanpa mempertimbangkan letak alam", "D. Paksaan peraturan dari negara lain"],
+            jawabanBenar: 1 // Index B
+        },
+        {
+            pertanyaan: "5. Sikap memandang rendah budaya suku lain dan menganggap budaya sukunya sendiri adalah yang paling hebat dan sempurna disebut dengan sikap...",
+            opsi: ["A. Etnosentrisme sempit yang dapat memicu konflik perpecahan", "B. Multikulturalisme yang inklusif", "C. Nasionalisme yang sehat dan demokratis", "D. Patriotisme kebangsaan"],
+            jawabanBenar: 0 // Index A
+        }
+    ];
+
+    let indeksSoalSekarang = 0;
+    let skorKuis = 0;
+
+    function mulaiKuis() {
+        indeksSoalSekarang = 0;
+        skorKuis = 0;
+        document.getElementById('area-petunjuk-kuis').style.display = 'none';
+        document.getElementById('area-kuis').style.display = 'flex';
+        document.getElementById('area-kuis').style.flexDirection = 'column';
+        tampilkanSoal();
+    }
+
+    function tampilkanSoal() {
+        let soal = bankSoal[indeksSoalSekarang];
+        document.getElementById('nomor-soal-teks').innerText = (indeksSoalSekarang + 1);
+        document.getElementById('teks-pertanyaan').innerText = soal.pertanyaan;
+        
+        let areaOpsi = document.getElementById('opsi-jawaban');
+        areaOpsi.innerHTML = ""; 
+        
+        for(let i = 0; i < soal.opsi.length; i++) {
+            let btn = document.createElement('button');
+            btn.className = "btn opsi-btn";
+            btn.innerText = soal.opsi[i];
+            btn.onclick = function() { cekJawaban(i); };
+            areaOpsi.appendChild(btn);
+        }
+    }
+
+    function cekJawaban(indeksDipilih) {
+        if(indeksDipilih === bankSoal[indeksSoalSekarang].jawabanBenar) {
+            skorKuis += 20; 
+        }
+        
+        indeksSoalSekarang++;
+        
+        if(indeksSoalSekarang < bankSoal.length) {
+            tampilkanSoal();
+        } else {
+            selesaiKuis();
+        }
+    }
+
+    function selesaiKuis() {
+        document.getElementById('area-kuis').style.display = 'none';
+        document.getElementById('area-hasil').style.display = 'block';
+        document.getElementById('skor-akhir').innerText = skorKuis;
+        
+        let pesan = "";
+        if(skorKuis === 100) pesan = "Sempurna! Pemahaman materimu sangat baik.";
+        else if(skorKuis >= 60) pesan = "Bagus! Terus tingkatkan semangat belajarmu.";
+        else pesan = "Jangan menyerah! Coba baca kembali materinya ya.";
+        
+        document.getElementById('pesan-hasil').innerText = pesan;
+    }
+</script>
+
+</body>
+</html>
